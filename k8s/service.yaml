@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-service
+spec:
+  selector:
+    app: flask
+    version: blue   # switches to green when promoted
+  ports:
+    - port: 80
+      targetPort: 5000
+  type: LoadBalancer
