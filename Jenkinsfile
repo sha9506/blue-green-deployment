@@ -28,15 +28,21 @@ pipeline {
                     def currentColor = "blue"
                     try {
                         currentColor = sh(
-                            script: "kubectl get svc flask-service -o=jsonpath='{.spec.selector.version}'",
+                            script: "kubectl get svc flask-service -o=jsonpath='{.spec.selector.version}' 2>/dev/null || echo 'blue'",
                             returnStdout: true
                         ).trim()
+                        if (currentColor == "") {
+                            currentColor = "blue"
+                        }
                     } catch (err) {
                         echo "Could not determine current color from service; defaulting to 'blue'. Details: ${err}"
+                        currentColor = "blue"
                     }
 
-                    env.NEXT_COLOR = (currentColor == "blue") ? "green" : "blue"
-                    sh "docker build -t ${REGISTRY}/flask-${env.NEXT_COLOR}:latest ."
+                    def nextColor = (currentColor == "blue") ? "green" : "blue"
+                    env.NEXT_COLOR = nextColor
+                    echo "Current color: ${currentColor}, Next color: ${nextColor}"
+                    sh "docker build -t ${REGISTRY}/flask-${nextColor}:latest ."
                 }
             }
         }
