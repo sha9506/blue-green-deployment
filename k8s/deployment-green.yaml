@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
         - name: flask
-          image: sabnam/flask-green:latest
+          image: sha9506/flask-green:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
           env:

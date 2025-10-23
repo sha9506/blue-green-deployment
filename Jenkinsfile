@@ -7,10 +7,11 @@ pipeline {
     }
 
     environment {
-        REGISTRY = "docker.io/sh9506"
+        REGISTRY = "docker.io/sha9506"
         BLUE_IMAGE = "${REGISTRY}/flask-blue:latest"
         GREEN_IMAGE = "${REGISTRY}/flask-green:latest"
         NEXT_COLOR = "" // will be set during the build stage
+        DOCKER_CREDENTIALS_ID = "docker-hub-credentials" // Jenkins credential ID
     }
 
     stages {
@@ -50,20 +51,26 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    // Expect DOCKER_USER and DOCKER_PASS to be provided as env or via Jenkins credentials binding
-                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
-                    sh "docker push ${REGISTRY}/flask-${env.NEXT_COLOR}:latest"
+                    // Use Jenkins credentials for Docker login
+                    withCredentials([usernamePassword(
+                        credentialsId: "${env.DOCKER_CREDENTIALS_ID}",
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                        sh "docker push ${REGISTRY}/flask-${env.NEXT_COLOR}:latest"
+                    }
                 }
             }
         }
 
-        // stage('Deploy to Kubernetes') {
-        //     steps {
-        //         script {
-        //             sh "kubectl apply -f k8s/deployment-${env.NEXT_COLOR}.yaml"
-        //             sh "kubectl patch service flask-service -p '{\"spec\":{\"selector\":{\"app\":\"flask\",\"version\":\"${env.NEXT_COLOR}\"}}}'"
-        //         }
-        //     }
-        // }
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    sh "kubectl apply -f k8s/deployment-${env.NEXT_COLOR}.yaml"
+                    sh "kubectl patch service flask-service -p '{\"spec\":{\"selector\":{\"app\":\"flask\",\"version\":\"${env.NEXT_COLOR}\"}}}'"
+                }
+            }
+        }
     }
 }
